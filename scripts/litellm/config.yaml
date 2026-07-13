@@ -1,0 +1,33 @@
+# LiteLLM-Gateway: übersetzt Anthropic-Format (/v1/messages, von der Agent SDK)
+# in OpenAI-Format für OpenRouter/Cortecs.
+#
+# Die model_name-Einträge sind die Namen, die in der Agent-Team-UI als
+# "Modell" eingetragen werden.
+model_list:
+  - model_name: claude-sonnet-4-5
+    litellm_params:
+      model: openrouter/anthropic/claude-sonnet-4.5
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  - model_name: claude-haiku-4-5
+    litellm_params:
+      model: openrouter/anthropic/claude-haiku-4.5
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  - model_name: claude-opus-4-8
+    litellm_params:
+      model: openrouter/anthropic/claude-opus-4.8
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  # Beispiel Cortecs AI (OpenAI-kompatibler Endpoint) — Modell-ID anpassen:
+  # - model_name: cortecs-sonnet
+  #   litellm_params:
+  #     model: openai/anthropic.claude-sonnet
+  #     api_base: https://api.cortecs.ai/v1
+  #     api_key: os.environ/CORTECS_API_KEY
+
+litellm_settings:
+  drop_params: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

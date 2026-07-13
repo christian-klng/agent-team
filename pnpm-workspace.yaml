@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "scripts"
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+  sharp: true
+  embedded-postgres: true
+  redis-memory-server: true
+  '@embedded-postgres/darwin-arm64': true

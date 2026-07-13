@@ -1,0 +1,36 @@
+{
+  "name": "@agent-team/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sync": "./src/sync/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "echo 'source package, no build'"
+  },
+  "dependencies": {
+    "@agent-team/db": "workspace:*",
+    "@agent-team/shared": "workspace:*",
+    "bullmq": "^5.30.0",
+    "drizzle-orm": "^0.44.0",
+    "imapflow": "^1.0.190",
+    "ioredis": "^5.4.0",
+    "mailparser": "^3.7.0",
+    "node-ical": "^0.26.1",
+    "nodemailer": "^7.0.0",
+    "rrule": "^2.8.0",
+    "sanitize-html": "^2.14.0",
+    "tsdav": "^2.1.0",
+    "webdav": "^5.7.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/mailparser": "^3.4.0",
+    "@types/nodemailer": "^7.0.0",
+    "@types/sanitize-html": "^2.13.0",
+    "typescript": "^5.7.0"
+  }
+}

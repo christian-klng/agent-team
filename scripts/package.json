@@ -1,0 +1,23 @@
+{
+  "name": "@agent-team/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed:user": "tsx seed-user.ts",
+    "seed:demo": "tsx seed-demo.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agent-team/core": "workspace:*",
+    "@agent-team/db": "workspace:*",
+    "@agent-team/shared": "workspace:*",
+    "better-auth": "^1.3.0",
+    "dotenv": "^16.4.0",
+    "drizzle-orm": "^0.44.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

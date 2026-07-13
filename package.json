@@ -1,0 +1,28 @@
+{
+  "name": "agent-team",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.5.3",
+  "scripts": {
+    "dev": "pnpm --parallel --filter web --filter worker dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:worker": "pnpm --filter worker dev",
+    "dev:services": "node scripts/dev-services.mjs",
+    "build": "pnpm --filter \"./packages/*\" --filter web --filter worker build",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @agent-team/db generate",
+    "db:migrate": "pnpm --filter @agent-team/db migrate",
+    "db:studio": "pnpm --filter @agent-team/db studio",
+    "seed:user": "pnpm --filter @agent-team/scripts seed:user",
+    "seed:demo": "pnpm --filter @agent-team/scripts seed:demo"
+  },
+  "devDependencies": {
+    "embedded-postgres": "18.4.0-beta.17",
+    "redis-memory-server": "^0.17.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

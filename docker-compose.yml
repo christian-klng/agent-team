@@ -1,0 +1,82 @@
+# Agent Team — Deployment für Coolify (Docker-Compose-Ressource).
+# In Coolify: dieses Compose-File als Ressource anlegen, Domain auf den
+# web-Service (Port 3000) legen, Env-Variablen im Coolify-UI setzen.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      DATABASE_URL: postgres://agentteam:${POSTGRES_PASSWORD}@postgres:5432/agentteam
+      REDIS_URL: redis://redis:6379
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+    expose:
+      - "3000"
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      DATABASE_URL: postgres://agentteam:${POSTGRES_PASSWORD}@postgres:5432/agentteam
+      REDIS_URL: redis://redis:6379
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      # Fallback ohne Gateway: ANTHROPIC_API_KEY setzen und LITELLM_BASE_URL leeren.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AGENT_DATA_DIR: /data
+      CLAUDE_CONFIG_DIR: /data/claude
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+    volumes:
+      - agent_data:/data
+    depends_on:
+      - postgres
+      - redis
+      - litellm
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: agentteam
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: agentteam
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      CORTECS_API_KEY: ${CORTECS_API_KEY:-}
+    volumes:
+      - ./scripts/litellm/config.yaml:/app/config.yaml:ro
+    expose:
+      - "4000"
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  redis_data:
+  agent_data:
