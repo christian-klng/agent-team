@@ -6,6 +6,14 @@ RUN npm install -g pnpm@11
 # Dev-only-Pakete (lokales Postgres/Redis für `pnpm dev:services`) dürfen im
 # Image keine Binaries kompilieren — im Build-Image fehlt make/gcc bewusst.
 ENV REDISMS_DISABLE_POSTINSTALL=1
+# pnpm-11-Supply-Chain-Checks im Image aus: sie feuern Hunderte Extra-Requests
+# (Metadaten/Attestations) und scheitern auf schwachen Leitungen an Timeouts.
+# Der Lockfile wurde bereits bei der Entwicklung gegen die Policies verifiziert.
+ENV npm_config_minimum_release_age=0
+ENV npm_config_trust_policy=off
+ENV npm_config_fetch_retries=5
+# Bevorzugt IPv4 — schützt vor Socket-Abbrüchen bei kaputtem IPv6-Routing.
+ENV NODE_OPTIONS=--dns-result-order=ipv4first
 COPY . .
 # Gefilterter Install: nur worker + Workspace-Abhängigkeiten. Überspringt die
 # Root-Dev-Dependencies (embedded-postgres, redis-memory-server) komplett.
