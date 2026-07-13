@@ -3,6 +3,9 @@
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 RUN npm install -g pnpm@11
+# Dev-only-Pakete (lokales Postgres/Redis für `pnpm dev:services`) dürfen im
+# Image keine Binaries kompilieren — im Build-Image fehlt make/gcc bewusst.
+ENV REDISMS_DISABLE_POSTINSTALL=1
 COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter worker build
