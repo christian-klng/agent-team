@@ -12,8 +12,12 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
-      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_BASE_URL: ${LITELLM_BASE_URL-http://litellm:4000}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      # Erst-Nutzer: wird beim ersten Start angelegt, wenn noch keiner existiert.
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
+      SEED_USER_NAME: ${SEED_USER_NAME:-}
     expose:
       - "3000"
     depends_on:
@@ -29,15 +33,13 @@ services:
       DATABASE_URL: postgres://agentteam:${POSTGRES_PASSWORD}@postgres:5432/agentteam
       REDIS_URL: redis://redis:6379
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
-      LITELLM_BASE_URL: http://litellm:4000
+      # In Coolify auf leeren Wert setzen, um das Gateway zu umgehen
+      # (dann greift ANTHROPIC_API_KEY direkt).
+      LITELLM_BASE_URL: ${LITELLM_BASE_URL-http://litellm:4000}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
-      # Fallback ohne Gateway: ANTHROPIC_API_KEY setzen und LITELLM_BASE_URL leeren.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       AGENT_DATA_DIR: /data
       CLAUDE_CONFIG_DIR: /data/claude
-      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-}
-      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
     volumes:
       - agent_data:/data
     depends_on:

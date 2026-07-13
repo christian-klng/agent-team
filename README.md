@@ -52,27 +52,22 @@ Login: `http://localhost:3000` mit `SEED_USER_EMAIL` / `SEED_USER_PASSWORD`.
 2. Domain auf den `web`-Service (Port 3000) legen, HTTPS via Coolify/Traefik.
 3. Env-Variablen in Coolify setzen (siehe Tabelle). `BETTER_AUTH_URL` =
    öffentliche URL der App.
-4. Deploy starten — der Worker führt Migrationen automatisch aus.
-5. Einmalig den Nutzer anlegen: im Worker-Container
-   `node dist/index.js` läuft bereits; Nutzer-Seed per
-   `docker exec` im **web**-Build geht nicht — stattdessen lokal
-   `DATABASE_URL=<prod-url> pnpm seed:user` ausführen oder die Variablen
-   `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` setzen und das Seed-Skript einmal im
-   Worker-Container ausführen:
-   `docker exec -it <worker> node -e "import('./dist/index.js')"` — siehe
-   `scripts/seed-user.ts`.
+4. Deploy starten — der Worker führt Migrationen automatisch aus, und die
+   Web-App legt beim ersten Start den Login-Nutzer aus
+   `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` an (nur solange noch kein Nutzer
+   existiert; danach sind die Variablen wirkungslos).
 
 | Variable | Pflicht | Beschreibung |
 | --- | --- | --- |
 | `POSTGRES_PASSWORD` | ✅ | Passwort der Postgres-Instanz im Compose-Stack |
 | `BETTER_AUTH_SECRET` | ✅ | `openssl rand -hex 32` |
-| `BETTER_AUTH_URL` | ✅ | Öffentliche URL, z. B. `https://team.example.com` |
+| `BETTER_AUTH_URL` | ✅ | Öffentliche URL mit Protokoll — auf Coolify der Wert von `SERVICE_URL_WEB` |
 | `APP_ENCRYPTION_KEY` | ✅ | 64 Hex-Zeichen — verschlüsselt Datenquellen-Passwörter |
 | `LITELLM_MASTER_KEY` | ✅ | Interner Key zwischen Worker und LiteLLM |
 | `OPENROUTER_API_KEY` | ▫️ | Für OpenRouter-Modelle im Gateway |
 | `CORTECS_API_KEY` | ▫️ | Für Cortecs-Modelle im Gateway |
-| `ANTHROPIC_API_KEY` | ▫️ | Fallback: direkte Anthropic-API statt Gateway |
-| `SEED_USER_EMAIL` / `SEED_USER_PASSWORD` | ▫️ | Erst-Login-Nutzer |
+| `ANTHROPIC_API_KEY` | ▫️ | Fallback: direkte Anthropic-API — dazu `LITELLM_BASE_URL` auf leeren Wert setzen |
+| `SEED_USER_EMAIL` / `SEED_USER_PASSWORD` | ✅ | Erst-Login-Nutzer (wird beim ersten Start automatisch angelegt) |
 
 ## Datenquellen einrichten
 
