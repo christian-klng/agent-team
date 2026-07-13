@@ -344,7 +344,7 @@ export function SourceFormDialog({
 
           {testResult && (
             <p
-              className={`rounded-md border px-3 py-2 text-xs ${
+              className={`rounded-md border px-3 py-2 text-xs whitespace-pre-line ${
                 testResult.ok
                   ? "border-green-300 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-300"
                   : "border-destructive/40 bg-destructive/10 text-destructive"

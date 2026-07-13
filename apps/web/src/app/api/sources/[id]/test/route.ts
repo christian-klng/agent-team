@@ -1,9 +1,8 @@
 import { requireUserId } from "@/lib/api-auth";
+import { testMailLegs } from "@/lib/test-mail";
 import {
   getSourceWithConfig,
   testCaldavConnection,
-  testImapConnection,
-  testSmtpConnection,
   testWebdavConnection,
 } from "@agent-team/core";
 import { dataSources, db } from "@agent-team/db";
@@ -31,9 +30,8 @@ export async function POST(
   try {
     const full = await getSourceWithConfig(source.id);
     if (full.type === "email") {
-      await testImapConnection(full.config);
-      await testSmtpConnection(full.config);
-      return NextResponse.json({ ok: true, message: "IMAP- und SMTP-Verbindung erfolgreich." });
+      const result = await testMailLegs(full.config);
+      return NextResponse.json(result);
     }
     if (full.type === "caldav") {
       const count = await testCaldavConnection(full.config);

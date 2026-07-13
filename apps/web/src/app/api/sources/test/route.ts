@@ -1,8 +1,7 @@
 import { requireUserId } from "@/lib/api-auth";
+import { testMailLegs } from "@/lib/test-mail";
 import {
   testCaldavConnection,
-  testImapConnection,
-  testSmtpConnection,
   testWebdavConnection,
 } from "@agent-team/core";
 import { createSourceInputSchema } from "@agent-team/shared";
@@ -25,7 +24,7 @@ export async function POST(req: Request) {
 
   try {
     if (input.type === "email") {
-      const cfg = {
+      const result = await testMailLegs({
         accountId: "test",
         dataSourceId: "test",
         imapHost: input.config.imapHost,
@@ -39,10 +38,8 @@ export async function POST(req: Request) {
         smtpPassword: input.config.smtpPassword,
         fromAddress: input.config.fromAddress,
         fromName: input.config.fromName ?? null,
-      };
-      await testImapConnection(cfg);
-      await testSmtpConnection(cfg);
-      return NextResponse.json({ ok: true, message: "IMAP- und SMTP-Verbindung erfolgreich." });
+      });
+      return NextResponse.json(result);
     }
     if (input.type === "caldav") {
       const count = await testCaldavConnection({
