@@ -7,7 +7,9 @@ RUN npm install -g pnpm@11
 # Image keine Binaries kompilieren — im Build-Image fehlt make/gcc bewusst.
 ENV REDISMS_DISABLE_POSTINSTALL=1
 COPY . .
-RUN pnpm install --frozen-lockfile
+# Gefilterter Install: nur worker + Workspace-Abhängigkeiten. Überspringt die
+# Root-Dev-Dependencies (embedded-postgres, redis-memory-server) komplett.
+RUN pnpm install --frozen-lockfile --filter "worker..."
 RUN pnpm --filter worker build
 # Isolierte Produktions-node_modules nur mit Worker-Dependencies.
 RUN pnpm --filter worker --prod deploy --legacy /out

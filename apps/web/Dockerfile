@@ -6,7 +6,9 @@ RUN npm install -g pnpm@11
 # Image keine Binaries kompilieren — im Build-Image fehlt make/gcc bewusst.
 ENV REDISMS_DISABLE_POSTINSTALL=1
 COPY . .
-RUN pnpm install --frozen-lockfile
+# Gefilterter Install: nur web + Workspace-Abhängigkeiten. Überspringt die
+# Root-Dev-Dependencies (embedded-postgres, redis-memory-server) komplett.
+RUN pnpm install --frozen-lockfile --filter "web..."
 RUN pnpm --filter web build
 
 FROM node:22-alpine AS runner
