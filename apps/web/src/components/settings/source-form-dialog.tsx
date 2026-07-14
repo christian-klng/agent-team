@@ -170,8 +170,13 @@ export function SourceFormDialog({
 
   const testMutation = useMutation({
     mutationFn: async () => {
-      if (isEdit && !hasNewCredentials()) {
-        return api.post<{ ok: boolean; message: string }>(`/api/sources/${source.id}/test`);
+      if (isEdit) {
+        // Gespeicherte Zugangsdaten + aktuelle Formular-Overrides testen —
+        // leere Passwortfelder bedeuten "gespeichertes Passwort verwenden".
+        return api.post<{ ok: boolean; message: string }>(
+          `/api/sources/${source.id}/test`,
+          { config: buildConfig(type, form, true) },
+        );
       }
       return api.post<{ ok: boolean; message: string }>("/api/sources/test", {
         type,
@@ -183,12 +188,6 @@ export function SourceFormDialog({
     onSuccess: (res) => setTestResult(res),
     onError: (err) => setTestResult({ ok: false, message: err.message }),
   });
-
-  function hasNewCredentials() {
-    return type === "email"
-      ? !!(form.imapPassword || form.smtpPassword)
-      : !!form.password;
-  }
 
   const pwPlaceholder = isEdit ? "•••••• (unverändert)" : "";
 

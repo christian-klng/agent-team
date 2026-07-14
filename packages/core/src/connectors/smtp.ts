@@ -9,6 +9,10 @@ export function createSmtpTransport(cfg: MailAccountConfig) {
     // Auf 587 STARTTLS erzwingen — sonst lehnen viele Server AUTH ab.
     ...(cfg.smtpPort === 587 ? { requireTLS: true } : {}),
     auth: { user: cfg.smtpUser, pass: cfg.smtpPassword },
+    // Zügig scheitern statt hängen (gefilterte Ports, TLS-Mismatch).
+    connectionTimeout: 15_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 60_000,
   });
 }
 

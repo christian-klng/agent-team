@@ -8,7 +8,9 @@ export function createImapClient(cfg: MailAccountConfig): ImapFlow {
     secure: cfg.imapTls,
     auth: { user: cfg.imapUser, pass: cfg.imapPassword },
     logger: false,
-    // Verbindungsaufbau soll in einem 5-Minuten-Sync nicht ewig hängen.
+    // Zügig scheitern statt hängen (gefilterte Ports, TLS-Mismatch).
+    connectionTimeout: 15_000,
+    greetingTimeout: 10_000,
     socketTimeout: 60_000,
   });
 }
