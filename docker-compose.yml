@@ -3,9 +3,9 @@
 # web-Service (Port 3000) legen, Env-Variablen im Coolify-UI setzen.
 services:
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    # Vorgebautes Image aus GitHub Actions (.github/workflows/docker-build.yml) —
+    # der Server baut nicht selbst (zu wenig RAM auf kleinen Instanzen).
+    image: ghcr.io/christian-klng/agent-team-web:latest
     environment:
       DATABASE_URL: postgres://agentteam:${POSTGRES_PASSWORD}@postgres:5432/agentteam
       REDIS_URL: redis://redis:6379
@@ -26,9 +26,7 @@ services:
     restart: unless-stopped
 
   worker:
-    build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
+    image: ghcr.io/christian-klng/agent-team-worker:latest
     environment:
       DATABASE_URL: postgres://agentteam:${POSTGRES_PASSWORD}@postgres:5432/agentteam
       REDIS_URL: redis://redis:6379

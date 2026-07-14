@@ -47,15 +47,25 @@ Login: `http://localhost:3000` mit `SEED_USER_EMAIL` / `SEED_USER_PASSWORD`.
 
 ## Deployment auf Coolify
 
-1. Repository nach GitHub/GitLab pushen und in Coolify als
-   **Docker-Compose-Ressource** anlegen (nutzt `docker-compose.yml`).
-2. Domain auf den `web`-Service (Port 3000) legen, HTTPS via Coolify/Traefik.
-3. Env-Variablen in Coolify setzen (siehe Tabelle). `BETTER_AUTH_URL` =
+Die Images baut **GitHub Actions** bei jedem Push auf `main`
+(`.github/workflows/docker-build.yml`) und pusht sie nach ghcr.io — der
+Server baut nichts selbst (schont RAM/Platte kleiner Instanzen).
+
+1. Repository nach GitHub pushen. Nach dem ersten Workflow-Lauf die beiden
+   Packages (`agent-team-web`, `agent-team-worker`) unter GitHub → Packages →
+   *Package settings* → **Change visibility → Public** stellen (sonst braucht
+   Coolify Registry-Zugangsdaten für ghcr.io).
+2. In Coolify als **Docker-Compose-Ressource** anlegen (nutzt
+   `docker-compose.yml`, das die ghcr.io-Images referenziert).
+3. Domain auf den `web`-Service (Port 3000) legen, HTTPS via Coolify/Traefik.
+4. Env-Variablen in Coolify setzen (siehe Tabelle). `BETTER_AUTH_URL` =
    öffentliche URL der App.
-4. Deploy starten — der Worker führt Migrationen automatisch aus, und die
-   Web-App legt beim ersten Start den Login-Nutzer aus
-   `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` an (nur solange noch kein Nutzer
-   existiert; danach sind die Variablen wirkungslos).
+5. Deploy starten — Coolify pullt die fertigen Images; der Worker führt
+   Migrationen automatisch aus, und die Web-App legt beim ersten Start den
+   Login-Nutzer aus `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` an (nur solange
+   noch kein Nutzer existiert).
+6. Ablauf bei Updates: pushen → warten bis der GitHub-Actions-Lauf grün ist →
+   in Coolify **Redeploy** klicken (pullt `latest`).
 
 | Variable | Pflicht | Beschreibung |
 | --- | --- | --- |
