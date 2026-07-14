@@ -3,7 +3,7 @@ import {
   describeSmtpError,
   testImapConnection,
   testSmtpConnection,
-  type MailAccountConfig,
+  type ImapMailAccountConfig,
 } from "@agent-team/core";
 
 const LEG_TIMEOUT_MS = 25_000;
@@ -27,7 +27,7 @@ function withTimeout(promise: Promise<void>): Promise<void> {
 
 /** IMAP und SMTP getrennt testen, damit die Fehlerquelle erkennbar ist. */
 export async function testMailLegs(
-  cfg: MailAccountConfig,
+  cfg: ImapMailAccountConfig,
 ): Promise<{ ok: boolean; message: string }> {
   const legs: string[] = [];
   let ok = true;

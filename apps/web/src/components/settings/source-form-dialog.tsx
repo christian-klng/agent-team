@@ -45,6 +45,8 @@ const COLORS = [
   "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#64748b",
 ];
 
+type MailProtocol = "imap" | "ews";
+
 type FormState = Record<string, string | boolean>;
 
 function initialForm(source?: SourceListItem): FormState {
@@ -61,6 +63,10 @@ function initialForm(source?: SourceListItem): FormState {
     smtpPort: String(c.smtpPort ?? "465"),
     smtpUser: String(c.smtpUser ?? ""),
     smtpPassword: "",
+    ewsUrl: String(c.ewsUrl ?? ""),
+    ewsUser: String(c.ewsUser ?? ""),
+    ewsPassword: "",
+    ewsDomain: String(c.ewsDomain ?? ""),
     fromAddress: String(c.fromAddress ?? ""),
     fromName: String(c.fromName ?? ""),
     serverUrl: String(c.serverUrl ?? ""),
@@ -71,9 +77,27 @@ function initialForm(source?: SourceListItem): FormState {
   };
 }
 
-function buildConfig(type: DataSourceType, f: FormState, forUpdate: boolean) {
+function buildConfig(
+  type: DataSourceType,
+  protocol: MailProtocol,
+  f: FormState,
+  forUpdate: boolean,
+) {
   if (type === "email") {
+    if (protocol === "ews") {
+      const cfg: Record<string, unknown> = {
+        protocol: "ews",
+        ewsUrl: f.ewsUrl,
+        ewsUser: f.ewsUser,
+        ewsDomain: f.ewsDomain || undefined,
+        fromAddress: f.fromAddress,
+        fromName: f.fromName || undefined,
+      };
+      if (!forUpdate || f.ewsPassword) cfg.ewsPassword = f.ewsPassword;
+      return cfg;
+    }
     const cfg: Record<string, unknown> = {
+      protocol: "imap",
       imapHost: f.imapHost,
       imapPort: Number(f.imapPort),
       imapTls: Boolean(f.imapTls),
@@ -129,16 +153,33 @@ export function SourceFormDialog({
   const isEdit = !!source;
   const queryClient = useQueryClient();
   const [type, setType] = useState<DataSourceType>(source?.type ?? "email");
+  const [protocol, setProtocol] = useState<MailProtocol>(
+    source?.config.protocol === "ews" ? "ews" : "imap",
+  );
   const [form, setForm] = useState<FormState>(() => initialForm(source));
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (open) {
       setType(source?.type ?? "email");
+      setProtocol(source?.config.protocol === "ews" ? "ews" : "imap");
       setForm(initialForm(source));
       setTestResult(null);
     }
   }, [open, source]);
+
+  // Kombinierter Wert für die Typ-Auswahl (E-Mail hat zwei Zugangswege).
+  const typeValue = type === "email" ? (protocol === "ews" ? "email-ews" : "email") : type;
+  const setTypeValue = (v: string | null) => {
+    if (!v) return;
+    if (v === "email-ews") {
+      setType("email");
+      setProtocol("ews");
+    } else {
+      setType(v as DataSourceType);
+      if (v === "email") setProtocol("imap");
+    }
+  };
 
   const set = (key: string) => (value: string | boolean) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -149,14 +190,14 @@ export function SourceFormDialog({
         await api.patch(`/api/sources/${source.id}`, {
           name: form.name,
           color: form.color,
-          config: buildConfig(type, form, true),
+          config: buildConfig(type, protocol, form, true),
         });
       } else {
         await api.post("/api/sources", {
           type,
           name: form.name,
           color: form.color,
-          config: buildConfig(type, form, false),
+          config: buildConfig(type, protocol, form, false),
         });
       }
     },
@@ -175,14 +216,14 @@ export function SourceFormDialog({
         // leere Passwortfelder bedeuten "gespeichertes Passwort verwenden".
         return api.post<{ ok: boolean; message: string }>(
           `/api/sources/${source.id}/test`,
-          { config: buildConfig(type, form, true) },
+          { config: buildConfig(type, protocol, form, true) },
         );
       }
       return api.post<{ ok: boolean; message: string }>("/api/sources/test", {
         type,
         name: form.name || "Test",
         color: form.color,
-        config: buildConfig(type, form, false),
+        config: buildConfig(type, protocol, form, false),
       });
     },
     onSuccess: (res) => setTestResult(res),
@@ -209,10 +250,11 @@ export function SourceFormDialog({
           {!isEdit && (
             <Field label="Typ">
               <Select
-                value={type}
-                onValueChange={(v) => setType(v as DataSourceType)}
+                value={typeValue}
+                onValueChange={setTypeValue}
                 items={[
                   { value: "email", label: `${dataSourceTypeLabels.email} (IMAP/SMTP)` },
+                  { value: "email-ews", label: `${dataSourceTypeLabels.email} (Exchange/EWS)` },
                   { value: "caldav", label: `${dataSourceTypeLabels.caldav} (CalDAV)` },
                   { value: "webdav", label: `${dataSourceTypeLabels.webdav} (WebDAV/NextCloud)` },
                 ]}
@@ -222,6 +264,7 @@ export function SourceFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="email">{dataSourceTypeLabels.email} (IMAP/SMTP)</SelectItem>
+                  <SelectItem value="email-ews">{dataSourceTypeLabels.email} (Exchange/EWS)</SelectItem>
                   <SelectItem value="caldav">{dataSourceTypeLabels.caldav} (CalDAV)</SelectItem>
                   <SelectItem value="webdav">{dataSourceTypeLabels.webdav} (WebDAV/NextCloud)</SelectItem>
                 </SelectContent>
@@ -254,7 +297,66 @@ export function SourceFormDialog({
             </div>
           </div>
 
-          {type === "email" && (
+          {type === "email" && protocol === "ews" && (
+            <>
+              <p className="text-xs font-medium text-muted-foreground">
+                Exchange Web Services
+              </p>
+              <Field label="EWS-URL">
+                <Input
+                  value={String(form.ewsUrl)}
+                  onChange={(e) => set("ewsUrl")(e.target.value)}
+                  placeholder="https://owa.example.de/EWS/Exchange.asmx"
+                />
+              </Field>
+              <p className="text-xs text-muted-foreground">
+                Meist der OWA-Host mit Pfad /EWS/Exchange.asmx — ohne Pfad wird er
+                automatisch ergänzt. Der Verbindungstest zeigt, welche
+                Anmeldeverfahren der Server anbietet (Basic/NTLM).
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Benutzername">
+                  <Input
+                    value={String(form.ewsUser)}
+                    onChange={(e) => set("ewsUser")(e.target.value)}
+                    placeholder="kurzform, z. B. klang"
+                  />
+                </Field>
+                <Field label="Passwort">
+                  <Input
+                    type="password"
+                    value={String(form.ewsPassword)}
+                    onChange={(e) => set("ewsPassword")(e.target.value)}
+                    placeholder={pwPlaceholder}
+                  />
+                </Field>
+              </div>
+              <Field label="Domäne (optional, für NTLM)">
+                <Input
+                  value={String(form.ewsDomain)}
+                  onChange={(e) => set("ewsDomain")(e.target.value)}
+                  placeholder="z. B. hwr-berlin"
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Absender-Adresse">
+                  <Input
+                    value={String(form.fromAddress)}
+                    onChange={(e) => set("fromAddress")(e.target.value)}
+                    placeholder="vorname.nachname@example.de"
+                  />
+                </Field>
+                <Field label="Absender-Name (optional)">
+                  <Input
+                    value={String(form.fromName)}
+                    onChange={(e) => set("fromName")(e.target.value)}
+                  />
+                </Field>
+              </div>
+            </>
+          )}
+
+          {type === "email" && protocol === "imap" && (
             <>
               <p className="text-xs font-medium text-muted-foreground">IMAP (Empfang)</p>
               <div className="grid grid-cols-[1fr_90px] gap-3">

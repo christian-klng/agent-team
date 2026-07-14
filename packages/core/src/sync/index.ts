@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { publishAppEvent } from "../events";
 import { getSourceWithConfig } from "../sources";
 import { syncCaldavSource } from "./caldav-sync";
+import { syncEwsMailSource } from "./ews-sync";
 import { fanOutChanges } from "./fanout";
 import { syncMailSource } from "./imap-sync";
 import { syncWebdavSource } from "./webdav-sync";
@@ -34,7 +35,9 @@ export async function runSyncForSource(dataSourceId: string): Promise<void> {
   try {
     const changes =
       full.type === "email"
-        ? await syncMailSource(full.config, source)
+        ? full.config.protocol === "ews"
+          ? await syncEwsMailSource(full.config, source)
+          : await syncMailSource(full.config, source)
         : full.type === "caldav"
           ? await syncCaldavSource(full.config, source)
           : await syncWebdavSource(full.config, source);

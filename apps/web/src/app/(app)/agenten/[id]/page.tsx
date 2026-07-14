@@ -288,8 +288,11 @@ export default function AgentDetailPage({
                 </p>
                 {triggers.map((trigger, i) => {
                   const source = sourceById.get(trigger.dataSourceId);
+                  // Exchange-Konten liefern neben Mails auch Kalender-Events.
                   const kinds = source
-                    ? triggerKindsBySourceType[source.type as DataSourceType]
+                    ? source.type === "email" && source.config.protocol === "ews"
+                      ? [...triggerKindsBySourceType.email, ...triggerKindsBySourceType.caldav]
+                      : triggerKindsBySourceType[source.type as DataSourceType]
                     : [];
                   return (
                     <div key={i} className="grid gap-3 rounded-lg border p-3">

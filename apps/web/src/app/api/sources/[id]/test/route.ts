@@ -3,6 +3,7 @@ import { testMailLegs } from "@/lib/test-mail";
 import {
   getSourceWithConfig,
   testCaldavConnection,
+  testEwsConnection,
   testWebdavConnection,
 } from "@agent-team/core";
 import { dataSources, db } from "@agent-team/db";
@@ -54,6 +55,16 @@ export async function POST(
   try {
     const full = await getSourceWithConfig(source.id);
     if (full.type === "email") {
+      if (full.config.protocol === "ews") {
+        const cfg = applyOverrides(full.config, overrides, [
+          "ewsUrl",
+          "ewsUser",
+          "ewsPassword",
+          "ewsDomain",
+        ]);
+        const result = await testEwsConnection(cfg);
+        return NextResponse.json(result);
+      }
       const cfg = applyOverrides(full.config, overrides, [
         "imapHost",
         "imapPort",

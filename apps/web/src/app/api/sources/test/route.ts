@@ -2,6 +2,7 @@ import { requireUserId } from "@/lib/api-auth";
 import { testMailLegs } from "@/lib/test-mail";
 import {
   testCaldavConnection,
+  testEwsConnection,
   testWebdavConnection,
 } from "@agent-team/core";
 import { createSourceInputSchema } from "@agent-team/shared";
@@ -24,7 +25,17 @@ export async function POST(req: Request) {
 
   try {
     if (input.type === "email") {
+      if (input.config.protocol === "ews") {
+        const result = await testEwsConnection({
+          ewsUrl: input.config.ewsUrl,
+          ewsUser: input.config.ewsUser,
+          ewsPassword: input.config.ewsPassword,
+          ewsDomain: input.config.ewsDomain ?? null,
+        });
+        return NextResponse.json(result);
+      }
       const result = await testMailLegs({
+        protocol: "imap",
         accountId: "test",
         dataSourceId: "test",
         imapHost: input.config.imapHost,

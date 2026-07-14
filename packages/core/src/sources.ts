@@ -8,9 +8,15 @@ import {
 import { eq } from "drizzle-orm";
 import { decryptSecret } from "./crypto";
 
-export interface MailAccountConfig {
+export interface MailAccountConfigBase {
   accountId: string;
   dataSourceId: string;
+  fromAddress: string;
+  fromName: string | null;
+}
+
+export interface ImapMailAccountConfig extends MailAccountConfigBase {
+  protocol: "imap";
   imapHost: string;
   imapPort: number;
   imapTls: boolean;
@@ -20,9 +26,17 @@ export interface MailAccountConfig {
   smtpPort: number;
   smtpUser: string;
   smtpPassword: string;
-  fromAddress: string;
-  fromName: string | null;
 }
+
+export interface EwsMailAccountConfig extends MailAccountConfigBase {
+  protocol: "ews";
+  ewsUrl: string;
+  ewsUser: string;
+  ewsPassword: string;
+  ewsDomain: string | null;
+}
+
+export type MailAccountConfig = ImapMailAccountConfig | EwsMailAccountConfig;
 
 export interface CaldavAccountConfig {
   accountId: string;
@@ -42,6 +56,54 @@ export interface WebdavStoreConfig {
 }
 
 export type SourceRow = typeof dataSources.$inferSelect;
+
+function mailConfigFromRow(
+  acc: typeof mailAccounts.$inferSelect,
+  dataSourceId: string,
+): MailAccountConfig {
+  const base = {
+    accountId: acc.id,
+    dataSourceId,
+    fromAddress: acc.fromAddress,
+    fromName: acc.fromName,
+  };
+  if (acc.protocol === "ews") {
+    if (!acc.ewsUrl || !acc.ewsUser || !acc.ewsPasswordEnc) {
+      throw new Error("EWS-Konfiguration unvollständig (URL, Benutzer oder Passwort fehlt)");
+    }
+    return {
+      ...base,
+      protocol: "ews",
+      ewsUrl: acc.ewsUrl,
+      ewsUser: acc.ewsUser,
+      ewsPassword: decryptSecret(acc.ewsPasswordEnc),
+      ewsDomain: acc.ewsDomain,
+    };
+  }
+  if (
+    !acc.imapHost ||
+    !acc.imapUser ||
+    !acc.imapPasswordEnc ||
+    !acc.smtpHost ||
+    !acc.smtpUser ||
+    !acc.smtpPasswordEnc
+  ) {
+    throw new Error("IMAP/SMTP-Konfiguration unvollständig");
+  }
+  return {
+    ...base,
+    protocol: "imap",
+    imapHost: acc.imapHost,
+    imapPort: acc.imapPort,
+    imapTls: acc.imapTls,
+    imapUser: acc.imapUser,
+    imapPassword: decryptSecret(acc.imapPasswordEnc),
+    smtpHost: acc.smtpHost,
+    smtpPort: acc.smtpPort,
+    smtpUser: acc.smtpUser,
+    smtpPassword: decryptSecret(acc.smtpPasswordEnc),
+  };
+}
 
 export type SourceWithConfig =
   | { source: SourceRow; type: "email"; config: MailAccountConfig }
@@ -63,25 +125,7 @@ export async function getSourceWithConfig(
       .from(mailAccounts)
       .where(eq(mailAccounts.dataSourceId, source.id));
     if (!acc) throw new Error("Mail-Konto-Konfiguration fehlt");
-    return {
-      source,
-      type: "email",
-      config: {
-        accountId: acc.id,
-        dataSourceId: source.id,
-        imapHost: acc.imapHost,
-        imapPort: acc.imapPort,
-        imapTls: acc.imapTls,
-        imapUser: acc.imapUser,
-        imapPassword: decryptSecret(acc.imapPasswordEnc),
-        smtpHost: acc.smtpHost,
-        smtpPort: acc.smtpPort,
-        smtpUser: acc.smtpUser,
-        smtpPassword: decryptSecret(acc.smtpPasswordEnc),
-        fromAddress: acc.fromAddress,
-        fromName: acc.fromName,
-      },
-    };
+    return { source, type: "email", config: mailConfigFromRow(acc, source.id) };
   }
 
   if (source.type === "caldav") {

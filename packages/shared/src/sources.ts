@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export const mailAccountInputSchema = z.object({
+export const imapAccountInputSchema = z.object({
+  protocol: z.literal("imap").default("imap"),
   imapHost: z.string().min(1),
   imapPort: z.coerce.number().int().min(1).max(65535).default(993),
   imapTls: z.boolean().default(true),
@@ -13,6 +14,25 @@ export const mailAccountInputSchema = z.object({
   fromAddress: z.string().email(),
   fromName: z.string().optional(),
 });
+export type ImapAccountInput = z.infer<typeof imapAccountInputSchema>;
+
+export const ewsAccountInputSchema = z.object({
+  protocol: z.literal("ews"),
+  ewsUrl: z.string().url(),
+  ewsUser: z.string().min(1),
+  ewsPassword: z.string().min(1),
+  /** Optionale AD-Domäne für NTLM (z. B. "hwr-berlin"). */
+  ewsDomain: z.string().optional(),
+  fromAddress: z.string().email(),
+  fromName: z.string().optional(),
+});
+export type EwsAccountInput = z.infer<typeof ewsAccountInputSchema>;
+
+/** EWS zuerst (hat Pflicht-Literal), sonst IMAP mit protocol-Default. */
+export const mailAccountInputSchema = z.union([
+  ewsAccountInputSchema,
+  imapAccountInputSchema,
+]);
 export type MailAccountInput = z.infer<typeof mailAccountInputSchema>;
 
 export const caldavAccountInputSchema = z.object({
@@ -68,6 +88,10 @@ export const updateSourceInputSchema = z.object({
       smtpPort: z.coerce.number().int().optional(),
       smtpUser: z.string().min(1).optional(),
       smtpPassword: z.string().optional(),
+      ewsUrl: z.string().url().optional(),
+      ewsUser: z.string().min(1).optional(),
+      ewsPassword: z.string().optional(),
+      ewsDomain: z.string().optional(),
       fromAddress: z.string().email().optional(),
       fromName: z.string().optional(),
       serverUrl: z.string().url().optional(),

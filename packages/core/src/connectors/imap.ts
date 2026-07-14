@@ -1,7 +1,7 @@
 import { ImapFlow } from "imapflow";
-import type { MailAccountConfig } from "../sources";
+import type { ImapMailAccountConfig } from "../sources";
 
-export function createImapClient(cfg: MailAccountConfig): ImapFlow {
+export function createImapClient(cfg: ImapMailAccountConfig): ImapFlow {
   return new ImapFlow({
     host: cfg.imapHost,
     port: cfg.imapPort,
@@ -16,7 +16,7 @@ export function createImapClient(cfg: MailAccountConfig): ImapFlow {
 }
 
 /** Verbindungstest: Login + Mailbox-Liste. Wirft bei Fehler. */
-export async function testImapConnection(cfg: MailAccountConfig): Promise<void> {
+export async function testImapConnection(cfg: ImapMailAccountConfig): Promise<void> {
   const client = createImapClient(cfg);
   try {
     await client.connect();

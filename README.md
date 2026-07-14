@@ -1,11 +1,11 @@
 # Agent Team
 
 CRM, Agenten-Plattform und Mail-/Kalender-Aggregator in einer selbst gehosteten
-Web-App. Datenquellen (E-Mail, Kalender, Dokumente) sind **Auslöser** für
-KI-Agenten und zugleich **Ziele** ihrer Aktionen: Agenten beobachten neue
-Einträge, sammeln mit Lese-Tools Kontext und legen dir **Entscheidungen** vor
-(z. B. „Formuliere Antwort-E-Mail"). Erst nach deiner Freigabe führt
-deterministischer Server-Code die Aktion aus.
+Web-App. Datenquellen (E-Mail via IMAP/SMTP **oder Exchange/EWS**, Kalender,
+Dokumente) sind **Auslöser** für KI-Agenten und zugleich **Ziele** ihrer
+Aktionen: Agenten beobachten neue Einträge, sammeln mit Lese-Tools Kontext und
+legen dir **Entscheidungen** vor (z. B. „Formuliere Antwort-E-Mail"). Erst nach
+deiner Freigabe führt deterministischer Server-Code die Aktion aus.
 
 **Sicherheitsmodell:** Agenten haben ausschließlich Lese-Tools plus
 `propose_decision`. Es existiert kein Tool, mit dem ein Agent senden, schreiben
@@ -21,7 +21,7 @@ zur Ausführung (Executor in `packages/core/src/decisions/`).
   Agent-Läufe (Claude Agent SDK), Decision-Ausführung. Führt beim Start
   DB-Migrationen aus.
 - **packages/db** — Drizzle-Schema (PostgreSQL), **packages/core** — Konnektoren
-  (IMAP/SMTP/CalDAV/WebDAV), Sync-Engine, Executors, **packages/shared** —
+  (IMAP/SMTP/CalDAV/WebDAV/EWS), Sync-Engine, Executors, **packages/shared** —
   Zod-Schemas & Typen für UI + Server.
 - **LLM-Anbindung:** Claude Agent SDK → `ANTHROPIC_BASE_URL` → LiteLLM-Gateway →
   OpenRouter/Cortecs (Konfiguration in `scripts/litellm/config.yaml`).
@@ -83,8 +83,11 @@ Server baut nichts selbst (schont RAM/Platte kleiner Instanzen).
 
 Unter **Einstellungen → Datenquellen**:
 
-- **E-Mail:** IMAP/SMTP mit App-Passwörtern (iCloud: `imap.mail.me.com` /
-  `smtp.mail.me.com`, Gmail: `imap.gmail.com` / `smtp.gmail.com`).
+- **E-Mail (IMAP/SMTP):** klassisch mit App-Passwörtern (iCloud:
+  `imap.mail.me.com` / `smtp.mail.me.com`, Gmail: `imap.gmail.com` /
+  `smtp.gmail.com`).
+- **E-Mail (Exchange/EWS):** für On-Prem-Exchange, bei dem IMAP/SMTP gesperrt
+  ist (siehe unten).
 - **Kalender:** CalDAV (iCloud: `https://caldav.icloud.com`, Google:
   `https://apidata.googleusercontent.com/caldav/v2/<kalender-id>/user`).
 - **Dokumente:** WebDAV, z. B. NextCloud
@@ -93,6 +96,28 @@ Unter **Einstellungen → Datenquellen**:
 
 Der erste Sync nimmt nur den Bestand auf (Baseline) — Agenten starten erst bei
 danach neu eintreffenden Einträgen.
+
+### Exchange Web Services (EWS)
+
+Manche Exchange-Server (z. B. On-Prem an Hochschulen) lehnen Basic-Auth auf
+IMAP/SMTP ab, erlauben Drittanwendungen aber EWS. Als E-Mail-Quelle „E-Mail
+(Exchange/EWS)" wählen und angeben:
+
+- **EWS-URL:** meist der OWA-Host mit Pfad `/EWS/Exchange.asmx` (fehlt der Pfad,
+  wird er automatisch ergänzt), z. B. `https://owa.hwr-berlin.de/EWS/Exchange.asmx`.
+- **Benutzername:** je nach Server Kurzform (`klang`), `DOMÄNE\benutzer` oder
+  `benutzer@domäne`.
+- **Passwort** und optional **Domäne** (für NTLM, z. B. `hwr-berlin`).
+
+Der **Verbindungstest** ermittelt zunächst per unauthentifiziertem Request,
+welche Anmeldeverfahren der Server anbietet (Basic und/oder NTLM), meldet sich
+dann an und liest den Posteingang — die getrennten Diagnose-Zeilen zeigen, an
+welcher Stelle es hakt. EWS-Konten landen in denselben Tabellen wie IMAP
+(Unified Inbox, Agenten-Tools, Kontakt-Zuordnung unverändert). Versand läuft
+über EWS (`CreateItem`/`SendAndSaveCopy`), sodass gesperrtes SMTP kein Problem
+ist. Über dieselbe Verbindung wird auch der **Exchange-Kalender** in die
+Kalender-Ansicht synchronisiert; Termin-Zu-/Absagen erfolgen per EWS
+(`AcceptItem`/`DeclineItem`).
 
 ## Agenten
 

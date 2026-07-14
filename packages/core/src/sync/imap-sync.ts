@@ -9,7 +9,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { ImapFlow, ListResponse } from "imapflow";
 import { simpleParser } from "mailparser";
 import { createImapClient } from "../connectors/imap";
-import type { MailAccountConfig, SourceRow } from "../sources";
+import type { ImapMailAccountConfig, SourceRow } from "../sources";
 import { buildSnippet, sanitizeMailHtml } from "./mail-content";
 import type { DetectedChange } from "./types";
 
@@ -66,7 +66,7 @@ function hasAttachments(node: BodyStructureNode | undefined): boolean {
 
 async function upsertFolders(
   client: ImapFlow,
-  cfg: MailAccountConfig,
+  cfg: ImapMailAccountConfig,
   source: SourceRow,
 ): Promise<void> {
   const entries = await client.list();
@@ -92,7 +92,7 @@ async function upsertFolders(
 /** Holt eine Mail vollständig, parst und speichert sie. Liefert die Row-ID oder null (Duplikat). */
 async function ingestFullMessage(
   client: ImapFlow,
-  cfg: MailAccountConfig,
+  cfg: ImapMailAccountConfig,
   source: SourceRow,
   folder: FolderRow,
   uid: number,
@@ -191,7 +191,7 @@ async function ingestFullMessage(
 /** Backfill: nur Envelopes, keine Bodies, keine Trigger. */
 async function backfillFolder(
   client: ImapFlow,
-  cfg: MailAccountConfig,
+  cfg: ImapMailAccountConfig,
   source: SourceRow,
   folder: FolderRow,
   uidNext: number,
@@ -258,7 +258,7 @@ async function syncFlagsViaCondstore(
 }
 
 export async function syncMailSource(
-  cfg: MailAccountConfig,
+  cfg: ImapMailAccountConfig,
   source: SourceRow,
 ): Promise<DetectedChange[]> {
   const changes: DetectedChange[] = [];

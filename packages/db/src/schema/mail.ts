@@ -40,6 +40,10 @@ export const mailFolders = pgTable(
     uidvalidity: bigint({ mode: "number" }),
     lastSeenUid: bigint({ mode: "number" }).notNull().default(0),
     highestModseq: bigint({ mode: "bigint" }),
+    /** EWS: FolderId.UniqueId (bei IMAP null). */
+    ewsFolderId: text(),
+    /** EWS: opaker SyncState von SyncFolderItems; null = Baseline steht aus. */
+    ewsSyncState: text(),
     syncEnabled: boolean().notNull().default(false),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -63,6 +67,8 @@ export const mailMessages = pgTable(
       .notNull()
       .references(() => mailFolders.id, { onDelete: "cascade" }),
     uid: bigint({ mode: "number" }).notNull(),
+    /** EWS: ItemId.UniqueId (bei IMAP null); uid ist dann ein Hash davon. */
+    ewsItemId: text(),
     messageIdHdr: text(),
     inReplyTo: text(),
     referencesHdrs: jsonb().$type<string[]>().notNull().default([]),
@@ -83,6 +89,7 @@ export const mailMessages = pgTable(
   },
   (t) => [
     uniqueIndex("mail_messages_folder_uid").on(t.folderId, t.uid),
+    uniqueIndex("mail_messages_folder_ews_item").on(t.folderId, t.ewsItemId),
     index("mail_messages_user_sent").on(t.userId, t.sentAt),
     index("mail_messages_from_email").on(t.fromEmail),
     index("mail_messages_message_id_hdr").on(t.messageIdHdr),

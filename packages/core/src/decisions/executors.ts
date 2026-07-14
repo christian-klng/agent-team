@@ -23,6 +23,7 @@ import { and, eq } from "drizzle-orm";
 // Expliziter Dateipfad: ESM erlaubt keine Verzeichnis-Importe.
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
 import { createCaldavClient } from "../connectors/caldav";
+import { EwsClient } from "../connectors/ews";
 import { createImapClient } from "../connectors/imap";
 import { createSmtpTransport } from "../connectors/smtp";
 import {
@@ -106,6 +107,22 @@ async function executeEmailSend(
   // Einmal komponieren, dann identisch senden und in "Gesendet" ablegen.
   const raw = await new MailComposer(mail).compile().build();
 
+  if (cfg.protocol === "ews") {
+    // Exchange versendet und legt die Kopie selbst in "Gesendete Elemente" ab.
+    const client = new EwsClient(cfg);
+    try {
+      await client.sendMailMime(raw);
+    } finally {
+      client.close();
+    }
+    return {
+      sentTo: payload.to,
+      cc: payload.cc,
+      subject: payload.subject,
+      appendedToSent: true,
+    };
+  }
+
   const transport = createSmtpTransport(cfg);
   try {
     await transport.sendMail({
@@ -168,13 +185,47 @@ async function executeEventRsvp(
       ),
     );
   if (!event) throw new Error("Termin nicht gefunden.");
-  if (!event.rawIcs) throw new Error("Für diesen Termin liegt kein Roh-ICS vor.");
 
   const [calendar] = await db
     .select()
     .from(calendars)
     .where(eq(calendars.id, event.calendarId));
   if (!calendar) throw new Error("Kalender nicht gefunden.");
+
+  // Exchange-Kalender: RSVP direkt über EWS (AcceptItem/DeclineItem) —
+  // Exchange aktualisiert den Kalender und benachrichtigt den Organisator.
+  if (calendar.ewsAccountId) {
+    const mailCfg = await getMailAccountConfigById(calendar.ewsAccountId);
+    if (mailCfg.protocol !== "ews") {
+      throw new Error("Kalender-Konto ist kein Exchange-Konto.");
+    }
+    const full = await getSourceWithConfig(mailCfg.dataSourceId);
+    if (full.source.userId !== ctx.userId) {
+      throw new Error("Kalender gehört nicht zum Nutzer.");
+    }
+    const client = new EwsClient(mailCfg);
+    try {
+      await client.respondToMeeting(event.objectUrl, payload.partstat, payload.comment);
+    } finally {
+      client.close();
+    }
+    const selfEmail = mailCfg.fromAddress.toLowerCase();
+    const hasSelf = event.attendees.some((a) => a.self);
+    await db
+      .update(calendarEvents)
+      .set({
+        attendees: hasSelf
+          ? event.attendees.map((a) => (a.self ? { ...a, partstat: payload.partstat } : a))
+          : [...event.attendees, { email: selfEmail, self: true, partstat: payload.partstat }],
+        updatedAt: new Date(),
+      })
+      .where(eq(calendarEvents.id, event.id));
+    return { partstat: payload.partstat, ewsResponded: true, itipSent: true };
+  }
+
+  if (!event.rawIcs) throw new Error("Für diesen Termin liegt kein Roh-ICS vor.");
+
+  if (!calendar.accountId) throw new Error("Kalender hat kein CalDAV-Konto.");
   const [account] = await db
     .select()
     .from(caldavAccounts)
@@ -280,20 +331,32 @@ async function executeEventRsvp(
             : payload.partstat === "DECLINED"
               ? "Absage"
               : "Vorbehalt";
-        const transport = createSmtpTransport(mailCfg);
-        try {
-          await transport.sendMail({
-            from: mailCfg.fromName
-              ? `"${mailCfg.fromName}" <${mailCfg.fromAddress}>`
-              : mailCfg.fromAddress,
-            to: organizerEmail,
-            subject: `${partstatDe}: ${event.summary}`,
-            text: `${partstatDe} für "${event.summary}".${payload.comment ? `\n\n${payload.comment}` : ""}`,
-            icalEvent: { method: "REPLY", content: replyIcs },
-          });
-          itipSent = true;
-        } finally {
-          transport.close();
+        const replyMail = {
+          from: mailCfg.fromName
+            ? `"${mailCfg.fromName}" <${mailCfg.fromAddress}>`
+            : mailCfg.fromAddress,
+          to: organizerEmail,
+          subject: `${partstatDe}: ${event.summary}`,
+          text: `${partstatDe} für "${event.summary}".${payload.comment ? `\n\n${payload.comment}` : ""}`,
+          icalEvent: { method: "REPLY", content: replyIcs },
+        };
+        if (mailCfg.protocol === "ews") {
+          const ewsClient = new EwsClient(mailCfg);
+          try {
+            const replyRaw = await new MailComposer(replyMail).compile().build();
+            await ewsClient.sendMailMime(replyRaw);
+            itipSent = true;
+          } finally {
+            ewsClient.close();
+          }
+        } else {
+          const transport = createSmtpTransport(mailCfg);
+          try {
+            await transport.sendMail(replyMail);
+            itipSent = true;
+          } finally {
+            transport.close();
+          }
         }
       }
     } catch (err) {

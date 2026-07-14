@@ -1,6 +1,6 @@
 import { requireUserId } from "@/lib/api-auth";
-import { caldavAccounts, calendars, dataSources, db } from "@agent-team/db";
-import { eq } from "drizzle-orm";
+import { caldavAccounts, calendars, dataSources, db, mailAccounts } from "@agent-team/db";
+import { eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -8,6 +8,8 @@ export async function GET() {
   if (authResult instanceof NextResponse) return authResult;
   const { userId } = authResult;
 
+  // Kalender hängen entweder an einem CalDAV-Konto oder (Exchange) an einem
+  // EWS-Mail-Konto — die Datenquelle kommt aus dem jeweils gesetzten FK.
   const rows = await db
     .select({
       id: calendars.id,
@@ -18,8 +20,12 @@ export async function GET() {
       accountColor: dataSources.color,
     })
     .from(calendars)
-    .innerJoin(caldavAccounts, eq(calendars.accountId, caldavAccounts.id))
-    .innerJoin(dataSources, eq(caldavAccounts.dataSourceId, dataSources.id))
+    .leftJoin(caldavAccounts, eq(calendars.accountId, caldavAccounts.id))
+    .leftJoin(mailAccounts, eq(calendars.ewsAccountId, mailAccounts.id))
+    .innerJoin(
+      dataSources,
+      sql`${dataSources.id} = coalesce(${caldavAccounts.dataSourceId}, ${mailAccounts.dataSourceId})`,
+    )
     .where(eq(calendars.userId, userId));
 
   return NextResponse.json(

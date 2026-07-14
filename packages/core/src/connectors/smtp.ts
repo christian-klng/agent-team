@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
-import type { MailAccountConfig } from "../sources";
+import type { ImapMailAccountConfig } from "../sources";
 
-export function createSmtpTransport(cfg: MailAccountConfig) {
+export function createSmtpTransport(cfg: ImapMailAccountConfig) {
   return nodemailer.createTransport({
     host: cfg.smtpHost,
     port: cfg.smtpPort,
@@ -16,7 +16,7 @@ export function createSmtpTransport(cfg: MailAccountConfig) {
   });
 }
 
-export async function testSmtpConnection(cfg: MailAccountConfig): Promise<void> {
+export async function testSmtpConnection(cfg: ImapMailAccountConfig): Promise<void> {
   const transport = createSmtpTransport(cfg);
   try {
     await transport.verify();

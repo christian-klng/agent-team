@@ -72,6 +72,12 @@ export async function PATCH(
           ...(c.smtpPassword
             ? { smtpPasswordEnc: encryptSecret(c.smtpPassword) }
             : {}),
+          ...(c.ewsUrl !== undefined ? { ewsUrl: c.ewsUrl } : {}),
+          ...(c.ewsUser !== undefined ? { ewsUser: c.ewsUser } : {}),
+          ...(c.ewsPassword
+            ? { ewsPasswordEnc: encryptSecret(c.ewsPassword) }
+            : {}),
+          ...(c.ewsDomain !== undefined ? { ewsDomain: c.ewsDomain || null } : {}),
           ...(c.fromAddress !== undefined ? { fromAddress: c.fromAddress } : {}),
           ...(c.fromName !== undefined ? { fromName: c.fromName } : {}),
         })

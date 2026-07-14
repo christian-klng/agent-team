@@ -8,6 +8,20 @@
       "when": 1783943030977,
       "tag": "0000_dapper_wild_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784043781979,
+      "tag": "0001_volatile_blockbuster",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784044806376,
+      "tag": "0002_nasty_snowbird",
+      "breakpoints": true
     }
   ]
 }

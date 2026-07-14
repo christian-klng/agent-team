@@ -139,7 +139,10 @@ export function SourcesPanel() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{source.name}</span>
-                  <Badge variant="secondary">{dataSourceTypeLabels[source.type]}</Badge>
+                  <Badge variant="secondary">
+                    {dataSourceTypeLabels[source.type]}
+                    {source.config.protocol === "ews" ? " · Exchange" : ""}
+                  </Badge>
                 </div>
                 <StatusLine source={source} />
               </div>

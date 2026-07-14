@@ -9,7 +9,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { caldavAccounts } from "./sources";
+import { caldavAccounts, mailAccounts } from "./sources";
 
 export const calendars = pgTable(
   "calendars",
@@ -18,9 +18,11 @@ export const calendars = pgTable(
     userId: text()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    accountId: uuid()
-      .notNull()
-      .references(() => caldavAccounts.id, { onDelete: "cascade" }),
+    /** CalDAV-Konto — null bei Exchange-Kalendern (dann ewsAccountId). */
+    accountId: uuid().references(() => caldavAccounts.id, { onDelete: "cascade" }),
+    /** EWS-Mail-Konto, über das dieser Exchange-Kalender läuft. */
+    ewsAccountId: uuid().references(() => mailAccounts.id, { onDelete: "cascade" }),
+    /** CalDAV: Kalender-URL; EWS: stabiler Platzhalter "ews://calendar". */
     caldavUrl: text().notNull(),
     displayName: text().notNull(),
     color: text(),
@@ -30,7 +32,10 @@ export const calendars = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("calendars_account_url").on(t.accountId, t.caldavUrl)],
+  (t) => [
+    uniqueIndex("calendars_account_url").on(t.accountId, t.caldavUrl),
+    uniqueIndex("calendars_ews_account_url").on(t.ewsAccountId, t.caldavUrl),
+  ],
 );
 
 export type EventAttendee = {

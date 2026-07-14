@@ -14,8 +14,10 @@
   "dependencies": {
     "@agent-team/db": "workspace:*",
     "@agent-team/shared": "workspace:*",
+    "@ewsjs/ntlm-client": "^3.0.1",
     "bullmq": "^5.30.0",
     "drizzle-orm": "^0.44.0",
+    "fast-xml-parser": "^5.10.0",
     "imapflow": "^1.0.190",
     "ioredis": "^5.4.0",
     "mailparser": "^3.7.0",

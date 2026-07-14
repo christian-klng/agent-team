@@ -7,6 +7,7 @@ export * from "./events";
 export * from "./sources";
 export * from "./connectors/imap";
 export * from "./connectors/smtp";
+export * from "./connectors/ews";
 export * from "./connectors/caldav";
 export * from "./connectors/webdav";
 export * from "./mail-ondemand";

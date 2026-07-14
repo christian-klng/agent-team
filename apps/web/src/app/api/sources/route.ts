@@ -31,18 +31,30 @@ export async function GET() {
           .from(mailAccounts)
           .where(eq(mailAccounts.dataSourceId, s.id));
         if (acc) {
-          config = {
-            accountId: acc.id,
-            imapHost: acc.imapHost,
-            imapPort: acc.imapPort,
-            imapTls: acc.imapTls,
-            imapUser: acc.imapUser,
-            smtpHost: acc.smtpHost,
-            smtpPort: acc.smtpPort,
-            smtpUser: acc.smtpUser,
-            fromAddress: acc.fromAddress,
-            fromName: acc.fromName,
-          };
+          config =
+            acc.protocol === "ews"
+              ? {
+                  accountId: acc.id,
+                  protocol: acc.protocol,
+                  ewsUrl: acc.ewsUrl,
+                  ewsUser: acc.ewsUser,
+                  ewsDomain: acc.ewsDomain,
+                  fromAddress: acc.fromAddress,
+                  fromName: acc.fromName,
+                }
+              : {
+                  accountId: acc.id,
+                  protocol: acc.protocol,
+                  imapHost: acc.imapHost,
+                  imapPort: acc.imapPort,
+                  imapTls: acc.imapTls,
+                  imapUser: acc.imapUser,
+                  smtpHost: acc.smtpHost,
+                  smtpPort: acc.smtpPort,
+                  smtpUser: acc.smtpUser,
+                  fromAddress: acc.fromAddress,
+                  fromName: acc.fromName,
+                };
         }
       } else if (s.type === "caldav") {
         const [acc] = await db
@@ -103,20 +115,34 @@ export async function POST(req: Request) {
 
   if (input.type === "email") {
     const c = input.config;
-    await db.insert(mailAccounts).values({
-      dataSourceId: source.id,
-      imapHost: c.imapHost,
-      imapPort: c.imapPort,
-      imapTls: c.imapTls,
-      imapUser: c.imapUser,
-      imapPasswordEnc: encryptSecret(c.imapPassword),
-      smtpHost: c.smtpHost,
-      smtpPort: c.smtpPort,
-      smtpUser: c.smtpUser,
-      smtpPasswordEnc: encryptSecret(c.smtpPassword),
-      fromAddress: c.fromAddress,
-      fromName: c.fromName ?? null,
-    });
+    if (c.protocol === "ews") {
+      await db.insert(mailAccounts).values({
+        dataSourceId: source.id,
+        protocol: "ews",
+        ewsUrl: c.ewsUrl,
+        ewsUser: c.ewsUser,
+        ewsPasswordEnc: encryptSecret(c.ewsPassword),
+        ewsDomain: c.ewsDomain ?? null,
+        fromAddress: c.fromAddress,
+        fromName: c.fromName ?? null,
+      });
+    } else {
+      await db.insert(mailAccounts).values({
+        dataSourceId: source.id,
+        protocol: "imap",
+        imapHost: c.imapHost,
+        imapPort: c.imapPort,
+        imapTls: c.imapTls,
+        imapUser: c.imapUser,
+        imapPasswordEnc: encryptSecret(c.imapPassword),
+        smtpHost: c.smtpHost,
+        smtpPort: c.smtpPort,
+        smtpUser: c.smtpUser,
+        smtpPasswordEnc: encryptSecret(c.smtpPassword),
+        fromAddress: c.fromAddress,
+        fromName: c.fromName ?? null,
+      });
+    }
   } else if (input.type === "caldav") {
     const c = input.config;
     await db.insert(caldavAccounts).values({

@@ -17,6 +17,8 @@ export const dataSourceType = pgEnum("data_source_type", [
 
 export const syncStatus = pgEnum("sync_status", ["ok", "error", "running"]);
 
+export const mailProtocol = pgEnum("mail_protocol", ["imap", "ews"]);
+
 export const dataSources = pgTable("data_sources", {
   id: uuid().primaryKey().defaultRandom(),
   userId: text()
@@ -41,15 +43,24 @@ export const mailAccounts = pgTable("mail_accounts", {
     .notNull()
     .unique()
     .references(() => dataSources.id, { onDelete: "cascade" }),
-  imapHost: text().notNull(),
+  /** Zugangsweg: klassisch IMAP/SMTP oder Exchange Web Services. */
+  protocol: mailProtocol().notNull().default("imap"),
+  // IMAP/SMTP (protocol = "imap")
+  imapHost: text(),
   imapPort: integer().notNull().default(993),
   imapTls: boolean().notNull().default(true),
-  imapUser: text().notNull(),
-  imapPasswordEnc: text().notNull(),
-  smtpHost: text().notNull(),
+  imapUser: text(),
+  imapPasswordEnc: text(),
+  smtpHost: text(),
   smtpPort: integer().notNull().default(465),
-  smtpUser: text().notNull(),
-  smtpPasswordEnc: text().notNull(),
+  smtpUser: text(),
+  smtpPasswordEnc: text(),
+  // Exchange Web Services (protocol = "ews")
+  ewsUrl: text(),
+  ewsUser: text(),
+  ewsPasswordEnc: text(),
+  /** Optionale AD-Domäne für NTLM (z. B. "hwr-berlin"). */
+  ewsDomain: text(),
   fromAddress: text().notNull(),
   fromName: text(),
 });
