@@ -107,6 +107,41 @@ function normalizeSubject(subject: string): string {
   return subject.replace(/^((re|aw|fwd|wg)\s*:\s*)+/i, "").trim().toLowerCase();
 }
 
+const CONTACT_FIELD_KEYS = [
+  "displayName",
+  "firstName",
+  "lastName",
+  "phone",
+  "currentEmployer",
+  "pastEmployers",
+  "notes",
+] as const;
+
+/**
+ * Repariert häufige LLM-Fehler im propose_decision-Payload, bevor validiert
+ * wird. contact_upsert: Kontaktfelder, die das Modell fälschlich auf oberster
+ * Ebene ablegt (statt unter `fields`), werden dorthin gefaltet — sonst würde
+ * Zod sie still verwerfen und der Vorschlag käme leer an.
+ */
+function normalizeProposedPayload(
+  type: DecisionType,
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  if (type !== "contact_upsert") return payload;
+  const out = { ...payload };
+  const fields = {
+    ...(out.fields && typeof out.fields === "object" ? (out.fields as Record<string, unknown>) : {}),
+  };
+  for (const key of CONTACT_FIELD_KEYS) {
+    if (out[key] !== undefined && fields[key] === undefined) {
+      fields[key] = out[key];
+      delete out[key];
+    }
+  }
+  out.fields = fields;
+  return out;
+}
+
 /** Baut den SDK-MCP-Server mit allen für diesen Agenten aktivierten Tools. */
 type ToolDef = NonNullable<Parameters<typeof createSdkMcpServer>[0]["tools"]>[number];
 
@@ -604,7 +639,7 @@ export function buildAgentToolServer(ctx: RunToolContext): {
   tools.push(
     tool(
       "propose_decision",
-      `Legt dem Nutzer eine Entscheidung zur Freigabe vor. Du kannst selbst NICHTS ausführen — dies ist dein einziger Weg, eine Aktion anzustoßen. Typen: ${decisionTypes.join(", ")}. Der payload muss zum Typ passen (email_send: {accountId, to[], cc[], subject, bodyText, inReplyToMessageId?}, event_rsvp: {eventId, partstat: ACCEPTED|DECLINED|TENTATIVE, comment?}, document_write: {storeId, path, newContent, baseEtag?}, contact_upsert: {contactId?, fields{...}, emails[]}, skill_update: {agentId, newMarkdown, changeSummary}).`,
+      `Legt dem Nutzer eine Entscheidung zur Freigabe vor. Du kannst selbst NICHTS ausführen — dies ist dein einziger Weg, eine Aktion anzustoßen. Typen: ${decisionTypes.join(", ")}. Der payload muss zum Typ passen (email_send: {accountId, to[], cc[], subject, bodyText, inReplyToMessageId?}, event_rsvp: {eventId, partstat: ACCEPTED|DECLINED|TENTATIVE, comment?}, document_write: {storeId, path, newContent, baseEtag?}, contact_upsert: {contactId? (nur zum Aktualisieren), fields:{displayName?, firstName?, lastName?, phone?, currentEmployer?, notes?}, emails:[{email, label?, isPrimary?}]} — Name/Telefon/Arbeitgeber gehören ZWINGEND unter "fields", nicht auf die oberste Ebene; skill_update: {agentId, newMarkdown, changeSummary}).`,
       {
         type: z.enum(decisionTypes),
         title: z.string().min(3).max(200).describe("Kurzer Titel, z. B. 'Antwort an Anna Weber'"),
@@ -613,9 +648,12 @@ export function buildAgentToolServer(ctx: RunToolContext): {
       },
       async ({ type, title, summary, payload }) => {
         const schema = decisionPayloadSchemas[type as DecisionType];
-        // Skill-Änderungen immer auf den eigenen Agenten beziehen.
+        // Häufige Payload-Fehler des Modells reparieren (z. B. Kontaktfelder
+        // auf oberster Ebene), dann Skill-Änderungen auf den eigenen Agenten
+        // beziehen.
+        const normalized = normalizeProposedPayload(type as DecisionType, payload);
         const effectivePayload =
-          type === "skill_update" ? { ...payload, agentId: agent.id } : payload;
+          type === "skill_update" ? { ...normalized, agentId: agent.id } : normalized;
         const parsed = schema.safeParse(effectivePayload);
         if (!parsed.success) {
           return fail(

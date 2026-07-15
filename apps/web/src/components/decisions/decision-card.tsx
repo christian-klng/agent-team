@@ -230,7 +230,10 @@ export function DecisionCard({ decision }: { decision: RunDecision; runId: strin
       await api.post(`/api/decisions/${decision.id}/approve`);
     },
     onSuccess: () => {
-      toast.success("Freigegeben — wird ausgeführt.");
+      // Neutraler Hinweis — kein grünes „Erfolg", weil die Ausführung erst
+      // asynchron läuft. Das Endergebnis (Ausgeführt/Fehlgeschlagen) zeigt die
+      // Karte live über ihren Status.
+      toast("Freigegeben — die Ausführung läuft.");
       setDirty(false);
       queryClient.invalidateQueries({ queryKey: ["runs"] });
       queryClient.invalidateQueries({ queryKey: ["decisions"] });

@@ -60,31 +60,49 @@ export const pastEmployerSchema = z.object({
   to: z.string().optional(),
 });
 
-export const contactUpsertPayloadSchema = z.object({
-  contactId: z
-    .string()
-    .uuid()
-    .optional()
-    .describe("Bestehender Kontakt (leer = neuen Kontakt anlegen)"),
-  fields: z.object({
-    displayName: z.string().optional(),
-    firstName: z.string().optional(),
-    lastName: z.string().optional(),
-    phone: z.string().optional(),
-    currentEmployer: z.string().optional(),
-    pastEmployers: z.array(pastEmployerSchema).optional(),
-    notes: z.string().optional(),
-  }),
-  emails: z
-    .array(
-      z.object({
-        email: z.string().email(),
-        label: z.string().optional(),
-        isPrimary: z.boolean().default(false),
-      }),
-    )
-    .default([]),
+export const contactFieldsSchema = z.object({
+  displayName: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  phone: z.string().optional(),
+  currentEmployer: z.string().optional(),
+  pastEmployers: z.array(pastEmployerSchema).optional(),
+  notes: z.string().optional(),
 });
+export type ContactFields = z.infer<typeof contactFieldsSchema>;
+
+export const contactUpsertPayloadSchema = z
+  .object({
+    contactId: z
+      .string()
+      .uuid()
+      .optional()
+      .describe("Bestehender Kontakt (leer = neuen Kontakt anlegen)"),
+    fields: contactFieldsSchema.describe(
+      "Kontaktdaten — MÜSSEN hier verschachtelt stehen, nicht auf oberster Ebene",
+    ),
+    emails: z
+      .array(
+        z.object({
+          email: z.string().email(),
+          label: z.string().optional(),
+          isPrimary: z.boolean().default(false),
+        }),
+      )
+      .default([]),
+  })
+  // Neuer Kontakt braucht einen Namen — sonst ist der Vorschlag leer und die
+  // Ausführung würde später scheitern.
+  .refine(
+    (p) =>
+      p.contactId != null ||
+      !!(p.fields.displayName || p.fields.firstName || p.fields.lastName),
+    {
+      message:
+        "Für einen neuen Kontakt ist mindestens Anzeigename oder Vor-/Nachname erforderlich (die Daten gehören unter „fields“).",
+      path: ["fields"],
+    },
+  );
 export type ContactUpsertPayload = z.infer<typeof contactUpsertPayloadSchema>;
 
 export const skillUpdatePayloadSchema = z.object({
