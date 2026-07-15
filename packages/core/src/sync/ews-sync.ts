@@ -25,6 +25,13 @@ const SYNC_BATCH_SIZE = 256;
 const MAX_BATCHES_PER_FOLDER = 400;
 /** Größere Mails beim Sync nur als Envelope erfassen; Body kommt on demand. */
 const INGEST_MIME_MAX_BYTES = 8 * 1024 * 1024;
+/**
+ * Baseline-Fenster: nur Mails der letzten N Tage werden beim Erst-Sync
+ * aufgenommen (analog zum IMAP-Backfill-Cap und zum Kalender-Zeitfenster).
+ * Die Enumeration läuft trotzdem komplett durch, um den SyncState zu setzen —
+ * begrenzt wird also nur, WAS gespeichert wird, nicht die einmalige Aufzählung.
+ */
+const BASELINE_WINDOW_DAYS = 180;
 
 type FolderRow = typeof mailFolders.$inferSelect;
 
@@ -379,8 +386,10 @@ export async function syncEwsMailSource(
       if (!folder.ewsFolderId) continue;
 
       // Ordner-Baseline: erster Durchlauf erfasst den Bestand ohne Trigger
-      // und ohne Bodies (analog zum IMAP-Backfill).
+      // und ohne Bodies (analog zum IMAP-Backfill), begrenzt auf das
+      // Baseline-Fenster.
       const folderIsBaseline = folder.ewsSyncState === null;
+      const baselineCutoff = Date.now() - BASELINE_WINDOW_DAYS * 86400_000;
       let syncState = folder.ewsSyncState;
       let batches = 0;
 
@@ -395,6 +404,12 @@ export async function syncEwsMailSource(
 
         for (const item of result.created) {
           if (folderIsBaseline) {
+            // Nur Mails im Baseline-Fenster aufnehmen; ältere überspringen
+            // (der SyncState oben deckt sie trotzdem ab → korrekte Deltas).
+            const effectiveDate = item.receivedAt ?? item.sentAt;
+            if (effectiveDate && new Date(effectiveDate).getTime() < baselineCutoff) {
+              continue;
+            }
             await db
               .insert(mailMessages)
               .values(summaryToRow(cfg, source, folder, item))
