@@ -70,6 +70,14 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       CORTECS_API_KEY: ${CORTECS_API_KEY:-}
+      # Muss explizit gesetzt sein: Coolify injiziert alle UI-Env-Variablen in
+      # JEDEN Service, und der (leere, nicht löschbare) DATABASE_URL-Eintrag im
+      # UI ließ LiteLLM beim Start sterben ("unsupported scheme"). Der Wert hier
+      # gewinnt gegen die Injektion; LiteLLM legt eigene Tabellen (LiteLLM_*)
+      # in der App-Datenbank an.
+      DATABASE_URL: postgresql://agentteam:${POSTGRES_PASSWORD}@postgres:5432/agentteam
+    depends_on:
+      - postgres
     # Inline-Config statt Bind-Mount: Coolify setzt dieses Compose-File ohne
     # Repo-Checkout ein — ein Bind-Mount auf ./scripts/... existiert dort nicht,
     # Docker legt dann ein leeres Verzeichnis an und LiteLLM crash-loopt
