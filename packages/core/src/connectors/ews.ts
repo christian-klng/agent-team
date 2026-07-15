@@ -1,12 +1,13 @@
 /// <reference path="../types/ewsjs-ntlm-client.d.ts" />
 import http from "node:http";
 import https from "node:https";
-import {
-  createType1Message,
-  createType3Message,
-  decodeType2Message,
-} from "@ewsjs/ntlm-client";
+// CommonJS-Paket: als Default importieren und zur Laufzeit destrukturieren.
+// Named-Imports auf CJS schlagen unter nativem Node-ESM fehl (der Worker läuft
+// als ESM), obwohl esbuild/tsx sie durchgehen lassen.
+import ntlmClient from "@ewsjs/ntlm-client";
 import { XMLParser } from "fast-xml-parser";
+
+const { createType1Message, decodeType2Message, createType3Message } = ntlmClient;
 
 /**
  * Minimaler EWS-SOAP-Client (Exchange Web Services) für On-Prem-Exchange.

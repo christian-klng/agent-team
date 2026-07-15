@@ -10,16 +10,27 @@ declare module "@ewsjs/ntlm-client" {
     /** Nur gesetzt, wenn der Server einen Target-Info-Block liefert (NTLMv2). */
     targetInfo?: { buffer: Buffer; parsed: Record<string, unknown> };
   }
-  /** Liefert "NTLM <base64>" für den Handshake-Start. */
-  export function createType1Message(workstation?: string, target?: string): string;
-  /** Akzeptiert den WWW-Authenticate-Header (oder nur den Base64-Teil). */
-  export function decodeType2Message(str: string): Type2Message;
-  /** Liefert "NTLM <base64>" als Antwort auf die Server-Challenge. */
-  export function createType3Message(
-    type2Message: Type2Message,
-    username: string,
-    password: string,
-    workstation?: string,
-    target?: string,
-  ): string;
+
+  /**
+   * Das Paket ist CommonJS (`module.exports = { … }`) — unter nativem Node-ESM
+   * ist nur der Default-Export (= module.exports) zuverlässig. Deshalb als
+   * Default deklarieren und im Code destrukturieren.
+   */
+  interface NtlmClient {
+    /** Liefert "NTLM <base64>" für den Handshake-Start. */
+    createType1Message(workstation?: string, target?: string): string;
+    /** Akzeptiert den WWW-Authenticate-Header (oder nur den Base64-Teil). */
+    decodeType2Message(str: string): Type2Message;
+    /** Liefert "NTLM <base64>" als Antwort auf die Server-Challenge. */
+    createType3Message(
+      type2Message: Type2Message,
+      username: string,
+      password: string,
+      workstation?: string,
+      target?: string,
+    ): string;
+  }
+
+  const ntlmClient: NtlmClient;
+  export default ntlmClient;
 }
