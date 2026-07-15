@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAppEvent } from "@/lib/use-app-events";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Markdown } from "@/components/ui/markdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -170,8 +171,8 @@ function RunTimeline({ run }: { run: RunDetail }) {
             return <TriggerCard key={event.id} text={String(event.content.text ?? "")} />;
           case "assistant_text":
             return (
-              <div key={event.id} className="rounded-lg bg-accent/60 p-3 text-sm whitespace-pre-wrap">
-                {String(event.content.text ?? "")}
+              <div key={event.id} className="rounded-lg bg-accent/60 p-3 text-sm">
+                <Markdown>{String(event.content.text ?? "")}</Markdown>
               </div>
             );
           case "user_message":
