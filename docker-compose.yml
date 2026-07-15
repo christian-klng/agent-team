@@ -70,11 +70,41 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       CORTECS_API_KEY: ${CORTECS_API_KEY:-}
-    volumes:
-      - ./scripts/litellm/config.yaml:/app/config.yaml:ro
+    # Inline-Config statt Bind-Mount: Coolify setzt dieses Compose-File ohne
+    # Repo-Checkout ein — ein Bind-Mount auf ./scripts/... existiert dort nicht,
+    # Docker legt dann ein leeres Verzeichnis an und LiteLLM crash-loopt
+    # (IsADirectoryError). Referenzkopie: scripts/litellm/config.yaml.
+    configs:
+      - source: litellm_config
+        target: /app/config.yaml
     expose:
       - "4000"
     restart: unless-stopped
+
+configs:
+  litellm_config:
+    content: |
+      model_list:
+        - model_name: claude-sonnet-4-5
+          litellm_params:
+            model: openrouter/anthropic/claude-sonnet-4.5
+            api_key: os.environ/OPENROUTER_API_KEY
+
+        - model_name: claude-haiku-4-5
+          litellm_params:
+            model: openrouter/anthropic/claude-haiku-4.5
+            api_key: os.environ/OPENROUTER_API_KEY
+
+        - model_name: claude-opus-4-8
+          litellm_params:
+            model: openrouter/anthropic/claude-opus-4.8
+            api_key: os.environ/OPENROUTER_API_KEY
+
+      litellm_settings:
+        drop_params: true
+
+      general_settings:
+        master_key: os.environ/LITELLM_MASTER_KEY
 
 volumes:
   pg_data:

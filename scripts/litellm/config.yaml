@@ -3,6 +3,10 @@
 #
 # Die model_name-Einträge sind die Namen, die in der Agent-Team-UI als
 # "Modell" eingetragen werden.
+#
+# ACHTUNG: Im Deployment liest LiteLLM NICHT diese Datei, sondern die
+# Inline-Kopie in docker-compose.yml (configs.litellm_config) — Änderungen
+# hier müssen dort nachgezogen werden.
 model_list:
   - model_name: claude-sonnet-4-5
     litellm_params:

@@ -2,7 +2,7 @@ import { ImapFlow } from "imapflow";
 import type { ImapMailAccountConfig } from "../sources";
 
 export function createImapClient(cfg: ImapMailAccountConfig): ImapFlow {
-  return new ImapFlow({
+  const client = new ImapFlow({
     host: cfg.imapHost,
     port: cfg.imapPort,
     secure: cfg.imapTls,
@@ -13,6 +13,13 @@ export function createImapClient(cfg: ImapMailAccountConfig): ImapFlow {
     greetingTimeout: 10_000,
     socketTimeout: 60_000,
   });
+  // ImapFlow meldet Socket-Fehler (z. B. Timeout) zusätzlich als 'error'-Event.
+  // Ohne Listener tötet Node den Prozess ("Unhandled 'error' event") — die
+  // laufenden Befehle sehen den Fehler ohnehin als abgelehnte Promises.
+  client.on("error", (err: Error) => {
+    console.warn(`[imap] Verbindungsfehler ${cfg.imapHost}: ${err.message}`);
+  });
+  return client;
 }
 
 /** Verbindungstest: Login + Mailbox-Liste. Wirft bei Fehler. */
